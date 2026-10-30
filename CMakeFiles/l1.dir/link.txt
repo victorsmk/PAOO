@@ -1,1 +1,0 @@
-/usr/bin/c++  -Wall -Wextra -g -rdynamic CMakeFiles/l1.dir/src/main.cpp.o CMakeFiles/l1.dir/src/tracker.cpp.o CMakeFiles/l1.dir/src/buffer.cpp.o CMakeFiles/l1.dir/src/demos.cpp.o -o l1 
