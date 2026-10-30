@@ -1,0 +1,3 @@
+/home/victor/paoo/L1/CMakeFiles/l1.dir
+/home/victor/paoo/L1/CMakeFiles/edit_cache.dir
+/home/victor/paoo/L1/CMakeFiles/rebuild_cache.dir
