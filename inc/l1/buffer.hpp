@@ -4,41 +4,44 @@
 #include <cstddef>
 #include <string>
 
-namespace paoo {
-
-///@brief Correct implementation: owns a heap array of ints.
-class Buffer
+namespace paoo
 {
-public:
-    Buffer(const std::string& name, std::size_t size, int fill = 0);
 
-    ///@brief Copy constructor: deep copy (new array, same content)
-    Buffer(const Buffer& other);
+    ///@brief Correct implementation: owns a heap array of ints.
+    class Buffer
+    {
+    public:
+        Buffer(const std::string &name, std::size_t size, int fill = 0);
 
-    ///@brief Move constructor: steals the array of 'other'
-    Buffer(Buffer&& other) noexcept;
+        ///@brief Copy constructor: deep copy (new array, same content)
+        Buffer(const Buffer &other);
 
-    ///@brief Destructor: releases the heap memory
-    ~Buffer();
+        ///@brief Move constructor: steals the array of 'other'
+        Buffer(Buffer &&other) noexcept;
 
-    // Assignment operators are out of scope for this assignment
-    Buffer& operator=(const Buffer&) = delete;
-    Buffer& operator=(Buffer&&) = delete;
+        ///@brief Destructor: releases the heap memory
+        ~Buffer();
 
-public:
-    const std::string& name() const;
-    std::size_t size() const;
-    int at(std::size_t index) const;          // bounds checked
-    void set(std::size_t index, int value);   // bounds checked
-    const int* raw() const;                   // only to compare addresses in demos
+        ///@brief Copy assignment: deep copy, safe for self-assignment, returns *this
+        Buffer &operator=(const Buffer &other);
 
-private:
-    // The state is private: the invariant "data_ points to size_ valid ints
-    // (or is nullptr when size_ == 0)" can only be broken from inside the class.
-    std::string name_;
-    std::size_t size_;
-    int* data_;
-};
+        ///@brief Move assignment: steals the array, safe for self-assignment, returns *this
+        Buffer &operator=(Buffer &&other) noexcept;
+
+    public:
+        const std::string &name() const;
+        std::size_t size() const;
+        int at(std::size_t index) const;        // bounds checked
+        void set(std::size_t index, int value); // bounds checked
+        const int *raw() const;                 // only to compare addresses in demos
+
+    private:
+        // The state is private: the invariant "data_ points to size_ valid ints
+        // (or is nullptr when size_ == 0)" can only be broken from inside the class.
+        std::string name_;
+        std::size_t size_;
+        int *data_;
+    };
 
 } // namespace paoo
 

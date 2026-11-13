@@ -10,8 +10,8 @@ Makefile
 compile_commands.json
 
 # Compiled binaries and objects
-paoo
-paoo.exe
+l1
+l1.exe
 *.o
 *.obj
 *.a

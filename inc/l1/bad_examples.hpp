@@ -6,75 +6,106 @@
 #include <algorithm>
 #include <cstddef>
 
-namespace paoo {
-
-///@brief NO destructor -> every object leaks its heap array.
-class LeakyBuffer
+namespace paoo
 {
-public:
-    explicit LeakyBuffer(std::size_t size) : size_(size), data_(new int[size]())
+
+    ///@brief NO destructor -> every object leaks its heap array.
+    class LeakyBuffer
     {
-        ++liveBlocks();
-    }
-    // missing: ~LeakyBuffer() { delete[] data_; }
+    public:
+        explicit LeakyBuffer(std::size_t size) : size_(size), data_(new int[size]())
+        {
+            ++liveBlocks();
+        }
+        // missing: ~LeakyBuffer() { delete[] data_; }
 
-private:
-    std::size_t size_;
-    int* data_;
-};
+    private:
+        std::size_t size_;
+        int *data_;
+    };
 
-///@brief Has a destructor, but NO copy constructor -> the compiler generates
-///       a member-wise (shallow) copy: both objects share the same array.
-class ShallowBuffer
-{
-public:
-    explicit ShallowBuffer(std::size_t size) : size_(size), data_(new int[size]())
+    ///@brief Has a destructor, but NO copy constructor -> the compiler generates
+    ///       a member-wise (shallow) copy: both objects share the same array.
+    class ShallowBuffer
     {
-        ++liveBlocks();
-    }
+    public:
+        explicit ShallowBuffer(std::size_t size) : size_(size), data_(new int[size]())
+        {
+            ++liveBlocks();
+        }
 
-    ~ShallowBuffer()
+        ~ShallowBuffer()
+        {
+            delete[] data_;
+            --liveBlocks();
+        }
+
+        int *data() { return data_; }
+
+    private:
+        std::size_t size_;
+        int *data_;
+    };
+
+    ///@brief Correct deep copy, but NO move constructor. Declaring a copy
+    ///       constructor/destructor suppresses the implicit move constructor,
+    ///       so every "move" silently becomes an expensive copy.
+    class CopyOnlyBuffer
     {
-        delete[] data_;
-        --liveBlocks();
-    }
+    public:
+        explicit CopyOnlyBuffer(std::size_t size) : size_(size), data_(new int[size]())
+        {
+            ++liveBlocks();
+        }
 
-    int* data() { return data_; }
+        CopyOnlyBuffer(const CopyOnlyBuffer &other)
+            : size_(other.size_), data_(new int[other.size_])
+        {
+            std::copy(other.data_, other.data_ + size_, data_);
+            ++liveBlocks();
+            ++copyCount();
+        }
 
-private:
-    std::size_t size_;
-    int* data_;
-};
+        ~CopyOnlyBuffer()
+        {
+            delete[] data_;
+            --liveBlocks();
+        }
 
-///@brief Correct deep copy, but NO move constructor. Declaring a copy
-///       constructor/destructor suppresses the implicit move constructor,
-///       so every "move" silently becomes an expensive copy.
-class CopyOnlyBuffer
-{
-public:
-    explicit CopyOnlyBuffer(std::size_t size) : size_(size), data_(new int[size]())
+    private:
+        std::size_t size_;
+        int *data_;
+    };
+
+    ///@brief operator= WITHOUT the self-assignment check: on 'x = x' it frees the
+    ///       block it is about to copy from.
+    class NaiveAssignBuffer
     {
-        ++liveBlocks();
-    }
+    public:
+        NaiveAssignBuffer(std::size_t size, int fill) : size_(size), data_(new int[size])
+        {
+            std::fill(data_, data_ + size_, fill);
+        }
 
-    CopyOnlyBuffer(const CopyOnlyBuffer& other)
-        : size_(other.size_), data_(new int[other.size_])
-    {
-        std::copy(other.data_, other.data_ + size_, data_);
-        ++liveBlocks();
-        ++copyCount();
-    }
+        NaiveAssignBuffer(const NaiveAssignBuffer &) = delete;
 
-    ~CopyOnlyBuffer()
-    {
-        delete[] data_;
-        --liveBlocks();
-    }
+        NaiveAssignBuffer &operator=(const NaiveAssignBuffer &other)
+        {
+            delete[] data_; // on self-assignment this destroys other's data too
+            data_ = new int[other.size_];
+            std::copy(other.data_, other.data_ + other.size_, data_); // reads freed memory
+            size_ = other.size_;
+            return *this;
+        }
 
-private:
-    std::size_t size_;
-    int* data_;
-};
+        ~NaiveAssignBuffer() { delete[] data_; }
+
+        int at(std::size_t index) const { return data_[index]; }
+
+    private:
+        std::size_t size_;
+        int *data_;
+    };
 
 } // namespace paoo
 

@@ -2,16 +2,17 @@
 
 #include <string>
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
-    const bool crash = (argc > 1 && std::string(argv[1]) == "double-free");
+    const std::string arg = (argc > 1) ? argv[1] : "";
 
     paoo::demoEncapsulation();
     paoo::demoInitializerList();
     paoo::demoDestructor();
-    paoo::demoCopyConstructor(crash);
+    paoo::demoCopyConstructor(arg == "double-free");
     paoo::demoMoveConstructor();
     paoo::demoCompilerGeneratedFunctions();
+    paoo::demoAssignment(arg == "self-assign");
 
     return 0;
 }

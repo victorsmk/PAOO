@@ -100,6 +100,59 @@ namespace paoo
             Uncopyable &operator=(const Uncopyable &) = delete;
         };
 
+        // derived class that copies ALL parts (base part + its own member)
+        class LabeledBuffer : public Buffer
+        {
+        public:
+            LabeledBuffer(const std::string &label, std::size_t size, int fill)
+                : Buffer(label, size, fill), label_(label) {}
+
+            LabeledBuffer(const LabeledBuffer &other)
+                : Buffer(other) // base part
+                  ,
+                  label_(other.label_) // derived part
+            {
+            }
+
+            LabeledBuffer &operator=(const LabeledBuffer &other)
+            {
+                Buffer::operator=(other); // base part
+                label_ = other.label_;    // derived part
+                return *this;
+            }
+
+            const std::string &label() const { return label_; }
+
+        private:
+            std::string label_;
+        };
+
+        // Same class, but the base part is forgotten
+        class BrokenLabeledBuffer : public Buffer
+        {
+        public:
+            BrokenLabeledBuffer(const std::string &label, std::size_t size, int fill)
+                : Buffer(label, size, fill), label_(label) {}
+
+            BrokenLabeledBuffer(const BrokenLabeledBuffer &other)
+                : Buffer("?", 0) // base part NOT copied
+                  ,
+                  label_(other.label_)
+            {
+            }
+
+            BrokenLabeledBuffer &operator=(const BrokenLabeledBuffer &other)
+            {
+                label_ = other.label_; // base part NOT assigned
+                return *this;
+            }
+
+            const std::string &label() const { return label_; }
+
+        private:
+            std::string label_;
+        };
+
     } // namespace
 
     // 2. Encapsulation
@@ -290,16 +343,68 @@ namespace paoo
                   << " (c's original block is leaked)" << std::endl;
 
         // explicitly forbidden operations do not compile
-        static_assert(!std::is_copy_assignable<Buffer>::value, "operator= is deleted");
+        static_assert(!std::is_copy_assignable<Uncopyable>::value, "operator= is deleted");
         static_assert(!std::is_copy_constructible<Uncopyable>::value, "copy ctor is deleted");
 
-        // Buffer x("x", 1), y("y", 1);
-        // x = y;                      // error: use of deleted function 'Buffer::operator=(const Buffer&)'
         // Uncopyable u1; Uncopyable u2(u1);   // error: use of deleted function
 
         std::cout << "Forbidden operations rejected at compile time "
                      "(see the commented lines in demos.cpp)."
                   << std::endl;
+    }
+
+    // Items 10, 11 and 12
+    void demoAssignment(bool unsafe)
+    {
+        title("Assignment operators (Items 10, 11, 12)");
+
+        // Item 10: operator= returns a reference to *this, so chaining works
+        static_assert(std::is_same<decltype(std::declval<Buffer &>() = std::declval<const Buffer &>()),
+                                   Buffer &>::value,
+                      "operator= must return Buffer&");
+        Buffer a("a", 2, 1), b("b", 2, 2), c("c", 2, 3);
+        a = b = c;
+        std::cout << "a = b = c  =>  a[0] = " << a.at(0) << ", b[0] = " << b.at(0)
+                  << " (both 3)" << std::endl;
+
+        // Item 11: self-assignment
+        Buffer s("s", 4, 7);
+        Buffer &alias = s;
+        const int *before = s.raw();
+        s = alias;
+        s = std::move(alias);
+        std::cout << "Buffer after self-assignment (copy and move): s[0] = " << s.at(0)
+                  << ", same block = " << (before == s.raw()) << std::endl;
+
+        if (unsafe)
+        {
+            NaiveAssignBuffer n(4, 7);
+            NaiveAssignBuffer &nAlias = n;
+            n = nAlias;
+            std::cout << "NaiveAssignBuffer after self-assignment: n[0] = " << n.at(0)
+                      << " (was 7; undefined behavior)" << std::endl;
+        }
+        else
+        {
+            std::cout << "(NaiveAssignBuffer self-assignment skipped: undefined behavior; "
+                         "run with the argument 'self-assign')"
+                      << std::endl;
+        }
+
+        // Item 12: copy all parts
+        LabeledBuffer ok1("ok1", 3, 5), ok2("ok2", 3, 9);
+        ok2 = ok1;
+        LabeledBuffer ok3(ok1);
+        std::cout << "LabeledBuffer assignment: label = " << ok2.label()
+                  << ", [0] = " << ok2.at(0) << " (5); copy ctor size = " << ok3.size()
+                  << " (3)" << std::endl;
+
+        BrokenLabeledBuffer bad1("bad1", 3, 5), bad2("bad2", 3, 9);
+        bad2 = bad1;
+        BrokenLabeledBuffer bad3(bad1);
+        std::cout << "BrokenLabeledBuffer assignment: label = " << bad2.label()
+                  << " (copied), [0] = " << bad2.at(0) << " (still 9: base part not copied); "
+                  << "copy ctor size = " << bad3.size() << " (should be 3)" << std::endl;
     }
 
 } // namespace paoo
