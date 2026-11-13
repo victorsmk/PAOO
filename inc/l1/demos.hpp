@@ -8,6 +8,7 @@ void demoInitializerList();
 void demoDestructor();
 void demoCopyConstructor(bool crash);
 void demoMoveConstructor();
+void demoCompilerGeneratedFunctions();
 
 } // namespace paoo
 

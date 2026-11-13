@@ -11,6 +11,7 @@ int main(int argc, char* argv[])
     paoo::demoDestructor();
     paoo::demoCopyConstructor(crash);
     paoo::demoMoveConstructor();
+    paoo::demoCompilerGeneratedFunctions();
 
     return 0;
 }
